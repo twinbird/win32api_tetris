@@ -234,6 +234,9 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 	PAINTSTRUCT ps;
 	
 	switch (msg) {
+		case WM_CREATE:
+			SetTimer(hwnd, 1, 1000, NULL);
+			return 0;
 		case WM_DESTROY:
 			PostQuitMessage(0);
 			return 0;
@@ -243,6 +246,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 			setTetrimino(currentTetrimino);
 			drawField(hdc);
 			EndPaint(hwnd, &ps);
+			return 0;
+		case WM_TIMER:
+			moveTetrimino(currentTetrimino, MOVE_TO_DOWN);
+			InvalidateRect(hwnd, NULL, TRUE);
 			return 0;
 		case WM_KEYDOWN:
 			keyProc(wp);
