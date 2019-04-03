@@ -5,9 +5,107 @@
 #define FIELD_HEIGHT_BLOCKS		(40)
 #define FIELD_WIDTH_BLOCKS		(20)
 #define SCORE_FIELD_WIDTH_PIXEL	(200)
+#define TETRIMINO_KINDS			(7)
+#define TETRIMINO_HEIGHT		(4)
+#define TETRIMINO_WIDTH			(4)
+
+// ブロックの種類
+enum blockType {
+	// ブロックがない
+	FREE_BLOCK,
+	// 固定ブロック
+	FIXED_BLOCK,
+	// 制御中のブロック
+	CONTROL_BLOCK
+};
+
+// フィールド
+int playField[FIELD_HEIGHT_BLOCKS][FIELD_WIDTH_BLOCKS];
+
+// テトリミノ
+int tetriminos[TETRIMINO_KINDS][TETRIMINO_HEIGHT][TETRIMINO_WIDTH] = {
+	{
+		{1,0,0,0},
+		{1,0,0,0},
+		{1,0,0,0},
+		{1,0,0,0}
+	},
+	{
+		{0,1,0,0},
+		{1,1,1,0},
+		{0,0,0,0},
+		{0,0,0,0}
+	},
+	{
+		{1,1,0,0},
+		{0,1,1,0},
+		{0,0,0,0},
+		{0,0,0,0}
+	},
+	{
+		{0,1,1,0},
+		{1,1,0,0},
+		{0,0,0,0},
+		{0,0,0,0}
+	},
+	{
+		{1,1,0,0},
+		{1,1,0,0},
+		{0,0,0,0},
+		{0,0,0,0}
+	},
+	{
+		{1,1,0,0},
+		{1,0,0,0},
+		{1,0,0,0},
+		{1,0,0,0}
+	}
+};
+
+// 指定位置にテトリミノを設置する
+BOOL setTetrimino(int type, int px, int py) {
+	int x, y;
+
+	// [TODO]
+	// 配置判定
+
+	for (y = 0; y < TETRIMINO_HEIGHT; y++) {
+		for (x = 0; x < TETRIMINO_HEIGHT; x++) {
+			if (tetriminos[type][y][x]) {
+				playField[py+y][px+x] = CONTROL_BLOCK;
+			}
+		}
+	}
+}
+
+// ブロック1つを描画する
+void drawBlock(HDC hdc, int x, int y) {
+	int left, top, right, bottom;
+
+	left = WINDOW_PADDING_PIXEL + (x * BLOCK_PIXEL_SIZE);
+	top = WINDOW_PADDING_PIXEL + (y * BLOCK_PIXEL_SIZE);
+	right = left + BLOCK_PIXEL_SIZE;
+	bottom = top + BLOCK_PIXEL_SIZE;
+	Rectangle(hdc, left, top, right, bottom);
+}
+
+// フィールドを描画する
+void drawField(HDC hdc) {
+	int x, y;
+
+	SelectObject(hdc, GetStockObject(WHITE_PEN));
+	for (y = 0; y < FIELD_HEIGHT_BLOCKS; y++) {
+		for (x = 0; x < FIELD_WIDTH_BLOCKS; x++) {
+			if (playField[y][x] != FREE_BLOCK) {
+				drawBlock(hdc, x, y);
+			}
+		}
+	}
+}
 
 // フィールドの枠線を描画する
-void drawField(HDC hdc) {
+void drawFieldBoundary(HDC hdc) {
+	SelectObject(hdc, GetStockObject(WHITE_PEN));
 	MoveToEx(hdc, WINDOW_PADDING_PIXEL, WINDOW_PADDING_PIXEL, NULL);
 	LineTo(hdc,
 			WINDOW_PADDING_PIXEL,
@@ -42,7 +140,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 			return 0;
 		case WM_PAINT:
 			hdc = BeginPaint(hwnd, &ps);
-			SelectObject(hdc, GetStockObject(WHITE_PEN));
+			drawFieldBoundary(hdc);
+			setTetrimino(0, 1, 0);
 			drawField(hdc);
 			EndPaint(hwnd, &ps);
 			return 0;
