@@ -9,20 +9,20 @@
 #define TETRIMINO_HEIGHT		(4)
 #define TETRIMINO_WIDTH			(4)
 
-// ãƒ–ãƒ­ãƒƒã‚¯ã®ç¨®é¡
+// ƒuƒƒbƒN‚Ìí—Ş
 enum blockType {
-	// ãƒ–ãƒ­ãƒƒã‚¯ãŒãªã„
+	// ƒuƒƒbƒN‚ª‚È‚¢
 	FREE_BLOCK,
-	// å›ºå®šãƒ–ãƒ­ãƒƒã‚¯
+	// ŒÅ’èƒuƒƒbƒN
 	FIXED_BLOCK,
-	// åˆ¶å¾¡ä¸­ã®ãƒ–ãƒ­ãƒƒã‚¯
+	// §Œä’†‚ÌƒuƒƒbƒN
 	CONTROL_BLOCK
 };
 
-// ãƒ•ã‚£ãƒ¼ãƒ«ãƒ‰
+// ƒtƒB[ƒ‹ƒh
 int playField[FIELD_HEIGHT_BLOCKS][FIELD_WIDTH_BLOCKS];
 
-// ãƒ†ãƒˆãƒªãƒŸãƒ
+// ƒeƒgƒŠƒ~ƒm
 int tetriminos[TETRIMINO_KINDS][TETRIMINO_HEIGHT][TETRIMINO_WIDTH] = {
 	{
 		{1,0,0,0},
@@ -62,23 +62,91 @@ int tetriminos[TETRIMINO_KINDS][TETRIMINO_HEIGHT][TETRIMINO_WIDTH] = {
 	}
 };
 
-// æŒ‡å®šä½ç½®ã«ãƒ†ãƒˆãƒªãƒŸãƒã‚’è¨­ç½®ã™ã‚‹
-BOOL setTetrimino(int type, int px, int py) {
+// ƒeƒgƒŠƒ~ƒm
+typedef struct _Tetrimino {
+	int x;
+	int y;
+	int type;
+} Tetrimino;
+
+// ƒeƒgƒŠƒ~ƒm‚ÌˆÚ“®•û®
+typedef enum _MoveType {
+	MOVE_TO_LEFT,
+	MOVE_TO_RIGHT,
+	MOVE_TO_DOWN,
+	MOVE_TO_DOWN_FAST
+} MoveType;
+
+// ‘€ì’†‚ÌƒeƒgƒŠƒ~ƒm
+Tetrimino currentTetrimino; 
+
+// ƒeƒgƒŠƒ~ƒm‚ğİ’u‚·‚é
+BOOL setTetrimino(Tetrimino t) {
 	int x, y;
 
 	// [TODO]
-	// é…ç½®åˆ¤å®š
+	// ”z’u”»’è
 
 	for (y = 0; y < TETRIMINO_HEIGHT; y++) {
 		for (x = 0; x < TETRIMINO_HEIGHT; x++) {
-			if (tetriminos[type][y][x]) {
-				playField[py+y][px+x] = CONTROL_BLOCK;
+			if (tetriminos[t.type][y][x]) {
+				playField[t.y+y][t.x+x] = CONTROL_BLOCK;
 			}
 		}
 	}
+	return TRUE;
 }
 
-// ãƒ–ãƒ­ãƒƒã‚¯1ã¤ã‚’æç”»ã™ã‚‹
+// ƒeƒgƒŠƒ~ƒm‚ğæ‚èœ‚­
+BOOL unsetTetrimino(Tetrimino t) {
+	int x, y;
+
+	// [TODO]
+	// ”z’u”»’è
+
+	for (y = 0; y < TETRIMINO_HEIGHT; y++) {
+		for (x = 0; x < TETRIMINO_HEIGHT; x++) {
+			if (playField[t.y+y][t.x+x] == CONTROL_BLOCK) {
+				playField[t.y+y][t.x+x] = FREE_BLOCK;
+			}
+		}
+	}
+	return TRUE;
+}
+
+// ƒeƒgƒŠƒ~ƒm‚ğˆÚ“®‚·‚é
+BOOL moveTetrimino(Tetrimino t, MoveType type) {
+	// Ÿ‚ÌêŠ‚ÌƒeƒgƒŠƒ~ƒm
+	Tetrimino next_t = t;
+	switch (type) {
+		case MOVE_TO_LEFT:
+			next_t.x = next_t.x - 1;
+			break;
+		case MOVE_TO_RIGHT:
+			next_t.x = next_t.x + 1;
+			break;
+		case MOVE_TO_DOWN:
+			next_t.y = next_t.y + 1;
+			break;
+		case MOVE_TO_DOWN_FAST:
+			break;
+	}
+
+	// ˆê“xæ‚èœ‚­
+	unsetTetrimino(t);
+	// ‚¨‚¢‚Ä‚İ‚é
+	if (setTetrimino(next_t) == FALSE) {
+		// ‚¾‚ß‚È‚ç–ß‚·
+		unsetTetrimino(next_t);
+		setTetrimino(t);
+		return FALSE;
+	}
+	// ‘€ì’†‚ÌƒeƒgƒŠƒ~ƒm‚ğ·‚µ‘Ö‚¦
+	currentTetrimino = next_t;
+	return TRUE;
+}
+
+// ƒuƒƒbƒN1‚Â‚ğ•`‰æ‚·‚é
 void drawBlock(HDC hdc, int x, int y) {
 	int left, top, right, bottom;
 
@@ -89,7 +157,7 @@ void drawBlock(HDC hdc, int x, int y) {
 	Rectangle(hdc, left, top, right, bottom);
 }
 
-// ãƒ•ã‚£ãƒ¼ãƒ«ãƒ‰ã‚’æç”»ã™ã‚‹
+// ƒtƒB[ƒ‹ƒh‚ğ•`‰æ‚·‚é
 void drawField(HDC hdc) {
 	int x, y;
 
@@ -103,7 +171,7 @@ void drawField(HDC hdc) {
 	}
 }
 
-// ãƒ•ã‚£ãƒ¼ãƒ«ãƒ‰ã®æ ç·šã‚’æç”»ã™ã‚‹
+// ƒtƒB[ƒ‹ƒh‚Ì˜gü‚ğ•`‰æ‚·‚é
 void drawFieldBoundary(HDC hdc) {
 	SelectObject(hdc, GetStockObject(WHITE_PEN));
 	MoveToEx(hdc, WINDOW_PADDING_PIXEL, WINDOW_PADDING_PIXEL, NULL);
@@ -118,7 +186,7 @@ void drawFieldBoundary(HDC hdc) {
 			WINDOW_PADDING_PIXEL);
 }
 
-// ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã‚µã‚¤ã‚ºã‚’å¤‰æ›´
+// ƒEƒBƒ“ƒhƒEƒTƒCƒY‚ğ•ÏX
 BOOL setClientSize(HWND hwnd, int width, int height) {
 	RECT rw, rc;
 	GetWindowRect(hwnd, &rw);
@@ -128,6 +196,37 @@ BOOL setClientSize(HWND hwnd, int width, int height) {
 	int new_height = (rw.bottom - rw.top) - (rc.bottom - rc.top) + height;
 
 	return SetWindowPos(hwnd, NULL, 0, 0, new_width, new_height, SWP_NOMOVE | SWP_NOZORDER);
+}
+
+// ƒL[‘€ìˆ—
+void keyProc(WPARAM wp) {
+	switch (wp) {
+		case VK_RIGHT:
+			moveTetrimino(currentTetrimino, MOVE_TO_RIGHT);
+			break;
+		case VK_LEFT:
+			moveTetrimino(currentTetrimino, MOVE_TO_LEFT);
+			break;
+		case VK_DOWN:
+			moveTetrimino(currentTetrimino, MOVE_TO_DOWN);
+			break;
+		case VK_UP:
+			moveTetrimino(currentTetrimino, MOVE_TO_DOWN_FAST);
+			break;
+		case VK_RETURN:
+			MessageBox(NULL, TEXT("ENTER"), TEXT("caption"), MB_OK);
+			break;
+		case VK_SPACE:
+			MessageBox(NULL, TEXT("SPACE"), TEXT("caption"), MB_OK);
+			break;
+	}
+}
+
+// ƒAƒvƒŠƒP[ƒVƒ‡ƒ“‚Æ‚µ‚Ä‚Ì‰Šú‰»ˆ—
+void initializeApp() {
+	currentTetrimino.x = 0;
+	currentTetrimino.y = 0;
+	currentTetrimino.type = 0;
 }
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
@@ -141,9 +240,13 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 		case WM_PAINT:
 			hdc = BeginPaint(hwnd, &ps);
 			drawFieldBoundary(hdc);
-			setTetrimino(0, 1, 0);
+			setTetrimino(currentTetrimino);
 			drawField(hdc);
 			EndPaint(hwnd, &ps);
+			return 0;
+		case WM_KEYDOWN:
+			keyProc(wp);
+			InvalidateRect(hwnd, NULL, TRUE);
 			return 0;
 	}
 	return DefWindowProc(hwnd, msg, wp, lp);
@@ -185,11 +288,14 @@ int WINAPI WinMain(
 		return -1;
 	}
 
-	// ã‚¦ã‚£ãƒ³ãƒ‰ã‚¦ã‚µã‚¤ã‚ºã‚’å¤‰æ›´
-	// ãƒ•ã‚£ãƒ¼ãƒ«ãƒ‰ã‚µã‚¤ã‚ºã«å·¦å³åˆ†ã®ãƒãƒ¼ã‚¸ãƒ³ã¨ã‚¹ã‚³ã‚¢è¡¨ç¤ºå¹…åˆ†ã‚’åŠ ãˆãŸã‚µã‚¤ã‚ºã«ã™ã‚‹
+	// ƒEƒBƒ“ƒhƒEƒTƒCƒY‚ğ•ÏX
+	// ƒtƒB[ƒ‹ƒhƒTƒCƒY‚É¶‰E•ª‚Ìƒ}[ƒWƒ“‚ÆƒXƒRƒA•\¦••ª‚ğ‰Á‚¦‚½ƒTƒCƒY‚É‚·‚é
 	setClientSize(hwnd,
 			(BLOCK_PIXEL_SIZE * FIELD_WIDTH_BLOCKS) + (WINDOW_PADDING_PIXEL * 2) + SCORE_FIELD_WIDTH_PIXEL,
 			(BLOCK_PIXEL_SIZE * FIELD_HEIGHT_BLOCKS) + (WINDOW_PADDING_PIXEL * 2));
+
+	// ƒAƒvƒŠƒP[ƒVƒ‡ƒ“‚Ì‰Šú‰»
+	initializeApp();
 
 	while (GetMessage(&msg, NULL, 0, 0)) {
 		DispatchMessage(&msg);
