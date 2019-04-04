@@ -260,9 +260,17 @@ void keyProc(WPARAM wp) {
 
 // アプリケーションとしての初期化処理
 void initializeApp() {
+	// 操作するテトリミノを用意して配置
 	currentTetrimino.x = 0;
 	currentTetrimino.y = 0;
 	currentTetrimino.type = 0;
+	setTetrimino(currentTetrimino);
+}
+
+// タイマーで呼び出されるメインループ
+void mainLoop(HWND hwnd) {
+	moveTetrimino(currentTetrimino, MOVE_TO_DOWN);
+	InvalidateRect(hwnd, NULL, TRUE);
 }
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
@@ -279,13 +287,11 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 		case WM_PAINT:
 			hdc = BeginPaint(hwnd, &ps);
 			drawFieldBoundary(hdc);
-			setTetrimino(currentTetrimino);
 			drawField(hdc);
 			EndPaint(hwnd, &ps);
 			return 0;
 		case WM_TIMER:
-			moveTetrimino(currentTetrimino, MOVE_TO_DOWN);
-			InvalidateRect(hwnd, NULL, TRUE);
+			mainLoop(hwnd);
 			return 0;
 		case WM_KEYDOWN:
 			keyProc(wp);
