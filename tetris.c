@@ -80,15 +80,56 @@ typedef enum _MoveType {
 // 操作中のテトリミノ
 Tetrimino currentTetrimino; 
 
+// 指定位置にテトリミノが配置できるか確認
+BOOL collisionTetrimino(Tetrimino t, int px, int py) {
+	int x, y;
+
+	// 起点がフィールド領域を超えている
+	if (px < 0 || FIELD_WIDTH_BLOCKS <= px) {
+		return FALSE;
+	}
+	if (py < 0 || FIELD_HEIGHT_BLOCKS <= py) {
+		return FALSE;
+	}
+
+	// テトリミノの部分のチェック
+	for (y = 0; y < TETRIMINO_HEIGHT; y++) {
+		for (x = 0; x < TETRIMINO_WIDTH; x++) {
+			// テトリミノのブロックがなければ判定外
+			if (tetriminos[t.type][y][x] == 0) {
+				continue;
+			}
+			// テトリミノをフィールドにマッピングした座標
+			int block_x = px + x;
+			int block_y = py + y;
+
+			// フィールド領域を超えた
+			if (block_x < 0 || FIELD_WIDTH_BLOCKS <= block_x) {
+				return FALSE;
+			}
+			if (block_y < 0 || FIELD_HEIGHT_BLOCKS <= block_y) {
+				return FALSE;
+			}
+			// すでにフィールドにブロックがあった
+			if (playField[block_y][block_x] != FREE_BLOCK) {
+				return FALSE;
+			}
+		}
+	}
+	return TRUE;
+}
+
 // テトリミノを設置する
 BOOL setTetrimino(Tetrimino t) {
 	int x, y;
 
-	// [TODO]
 	// 配置判定
+	if (collisionTetrimino(t, t.x, t.y) == FALSE) {
+		return FALSE;
+	}
 
 	for (y = 0; y < TETRIMINO_HEIGHT; y++) {
-		for (x = 0; x < TETRIMINO_HEIGHT; x++) {
+		for (x = 0; x < TETRIMINO_WIDTH; x++) {
 			if (tetriminos[t.type][y][x]) {
 				playField[t.y+y][t.x+x] = CONTROL_BLOCK;
 			}
@@ -98,11 +139,8 @@ BOOL setTetrimino(Tetrimino t) {
 }
 
 // テトリミノを取り除く
-BOOL unsetTetrimino(Tetrimino t) {
+void unsetTetrimino(Tetrimino t) {
 	int x, y;
-
-	// [TODO]
-	// 配置判定
 
 	for (y = 0; y < TETRIMINO_HEIGHT; y++) {
 		for (x = 0; x < TETRIMINO_HEIGHT; x++) {
@@ -111,7 +149,6 @@ BOOL unsetTetrimino(Tetrimino t) {
 			}
 		}
 	}
-	return TRUE;
 }
 
 // テトリミノを移動する
@@ -137,7 +174,6 @@ BOOL moveTetrimino(Tetrimino t, MoveType type) {
 	// おいてみる
 	if (setTetrimino(next_t) == FALSE) {
 		// だめなら戻す
-		unsetTetrimino(next_t);
 		setTetrimino(t);
 		return FALSE;
 	}
