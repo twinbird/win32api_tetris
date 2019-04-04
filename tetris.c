@@ -80,6 +80,18 @@ typedef enum _MoveType {
 // 操作中のテトリミノ
 Tetrimino currentTetrimino; 
 
+// テトリミノを固定する
+void fixTetrimino(Tetrimino t) {
+	int x, y;
+	for (y = 0; y < TETRIMINO_HEIGHT; y++) {
+		for (x = 0; x < TETRIMINO_WIDTH; x++) {
+			if (playField[t.y + y][t.x + x] == CONTROL_BLOCK) {
+				playField[t.y + y][t.x + x] = FIXED_BLOCK;
+			}
+		}
+	}
+}
+
 // 指定位置にテトリミノが配置できるか確認
 BOOL collisionTetrimino(Tetrimino t, int px, int py) {
 	int x, y;
@@ -151,6 +163,17 @@ void unsetTetrimino(Tetrimino t) {
 	}
 }
 
+// 新しいテトリミノを作成して操作中に設定
+void createTetrimino(int x, int y, int type) {
+	Tetrimino t;
+	// 操作するテトリミノを用意して配置
+	t.x = 0;
+	t.y = 0;
+	t.type = 0;
+	currentTetrimino = t;
+	setTetrimino(currentTetrimino);
+}
+
 // テトリミノを移動する
 BOOL moveTetrimino(Tetrimino t, MoveType type) {
 	// 次の場所のテトリミノ
@@ -197,10 +220,13 @@ void drawBlock(HDC hdc, int x, int y) {
 void drawField(HDC hdc) {
 	int x, y;
 
-	SelectObject(hdc, GetStockObject(WHITE_PEN));
 	for (y = 0; y < FIELD_HEIGHT_BLOCKS; y++) {
 		for (x = 0; x < FIELD_WIDTH_BLOCKS; x++) {
-			if (playField[y][x] != FREE_BLOCK) {
+			if (playField[y][x] == CONTROL_BLOCK) {
+				SelectObject(hdc, CreateSolidBrush(RGB(0, 0, 255)));
+				drawBlock(hdc, x, y);
+			} else if (playField[y][x] == FIXED_BLOCK) {
+				SelectObject(hdc, CreateSolidBrush(RGB(0, 255, 0)));
 				drawBlock(hdc, x, y);
 			}
 		}
@@ -261,15 +287,20 @@ void keyProc(WPARAM wp) {
 // アプリケーションとしての初期化処理
 void initializeApp() {
 	// 操作するテトリミノを用意して配置
-	currentTetrimino.x = 0;
-	currentTetrimino.y = 0;
-	currentTetrimino.type = 0;
-	setTetrimino(currentTetrimino);
+	createTetrimino(0, 0, 0);
 }
 
 // タイマーで呼び出されるメインループ
 void mainLoop(HWND hwnd) {
-	moveTetrimino(currentTetrimino, MOVE_TO_DOWN);
+	// 1コマ落とす
+	BOOL down_ret = moveTetrimino(currentTetrimino, MOVE_TO_DOWN);
+	// 落ちなかったら固定して新しいテトリミノを用意
+	if (down_ret == FALSE) {
+		fixTetrimino(currentTetrimino);
+		createTetrimino(0, 0, 0);
+	}
+
+	// 再描画
 	InvalidateRect(hwnd, NULL, TRUE);
 }
 
