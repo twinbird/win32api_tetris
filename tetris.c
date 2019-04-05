@@ -76,8 +76,7 @@ typedef struct _Tetrimino {
 typedef enum _MoveType {
 	MOVE_TO_LEFT,
 	MOVE_TO_RIGHT,
-	MOVE_TO_DOWN,
-	MOVE_TO_DOWN_FAST
+	MOVE_TO_DOWN
 } MoveType;
 
 // テトリミノの回転方式
@@ -206,9 +205,6 @@ BOOL moveTetrimino(Tetrimino t, MoveType type) {
 		case MOVE_TO_DOWN:
 			next_t.y = next_t.y + 1;
 			break;
-		case MOVE_TO_DOWN_FAST:
-			// [TODO]
-			break;
 	}
 
 	// 一度取り除く
@@ -221,6 +217,16 @@ BOOL moveTetrimino(Tetrimino t, MoveType type) {
 	}
 	// 操作中のテトリミノを差し替え
 	currentTetrimino = next_t;
+	return TRUE;
+}
+
+// テトリミノを1つ落とす
+BOOL downTetrimino() {
+	if (moveTetrimino(currentTetrimino, MOVE_TO_DOWN) == FALSE) {
+		fixTetrimino(currentTetrimino);
+		createTetrimino(0, 0, rand() % TETRIMINO_KINDS);
+		return FALSE;
+	}
 	return TRUE;
 }
 
@@ -398,10 +404,11 @@ void keyProc(WPARAM wp) {
 			moveTetrimino(currentTetrimino, MOVE_TO_LEFT);
 			break;
 		case VK_DOWN:
-			moveTetrimino(currentTetrimino, MOVE_TO_DOWN);
+			downTetrimino(currentTetrimino);
 			break;
 		case VK_UP:
-			moveTetrimino(currentTetrimino, MOVE_TO_DOWN_FAST);
+			while (downTetrimino() == TRUE)
+				;
 			break;
 		case VK_RETURN:
 			rotateTetrimino(currentTetrimino, CLOCKWISE);
