@@ -67,6 +67,7 @@ typedef struct _Tetrimino {
 	int x;
 	int y;
 	int type;
+	int tetrimino[TETRIMINO_HEIGHT][TETRIMINO_WIDTH];
 } Tetrimino;
 
 // テトリミノの移動方式
@@ -76,6 +77,12 @@ typedef enum _MoveType {
 	MOVE_TO_DOWN,
 	MOVE_TO_DOWN_FAST
 } MoveType;
+
+// テトリミノの回転方式
+typedef enum _RotateType {
+	CLOCKWISE,
+	COUNTER_CLOCKWISE
+} RotateType;
 
 // 操作中のテトリミノ
 Tetrimino currentTetrimino; 
@@ -108,7 +115,7 @@ BOOL collisionTetrimino(Tetrimino t, int px, int py) {
 	for (y = 0; y < TETRIMINO_HEIGHT; y++) {
 		for (x = 0; x < TETRIMINO_WIDTH; x++) {
 			// テトリミノのブロックがなければ判定外
-			if (tetriminos[t.type][y][x] == 0) {
+			if (t.tetrimino[y][x] == 0) {
 				continue;
 			}
 			// テトリミノをフィールドにマッピングした座標
@@ -142,7 +149,7 @@ BOOL setTetrimino(Tetrimino t) {
 
 	for (y = 0; y < TETRIMINO_HEIGHT; y++) {
 		for (x = 0; x < TETRIMINO_WIDTH; x++) {
-			if (tetriminos[t.type][y][x]) {
+			if (t.tetrimino[y][x]) {
 				playField[t.y+y][t.x+x] = CONTROL_BLOCK;
 			}
 		}
@@ -165,12 +172,21 @@ void unsetTetrimino(Tetrimino t) {
 
 // 新しいテトリミノを作成して操作中に設定
 void createTetrimino(int x, int y, int type) {
+	int i, k;
 	Tetrimino t;
+
 	// 操作するテトリミノを用意して配置
-	t.x = 0;
-	t.y = 0;
-	t.type = 0;
+	t.x = x;
+	t.y = y;
+	t.type = type;
+	for (i = 0; i < TETRIMINO_HEIGHT; i++) {
+		for (k = 0; k < TETRIMINO_WIDTH; k++) {
+			t.tetrimino[i][k] = tetriminos[type][i][k];
+		}
+	}
 	currentTetrimino = t;
+
+	// 配置
 	setTetrimino(currentTetrimino);
 }
 
@@ -189,9 +205,119 @@ BOOL moveTetrimino(Tetrimino t, MoveType type) {
 			next_t.y = next_t.y + 1;
 			break;
 		case MOVE_TO_DOWN_FAST:
+			// [TODO]
 			break;
 	}
 
+	// 一度取り除く
+	unsetTetrimino(t);
+	// おいてみる
+	if (setTetrimino(next_t) == FALSE) {
+		// だめなら戻す
+		setTetrimino(t);
+		return FALSE;
+	}
+	// 操作中のテトリミノを差し替え
+	currentTetrimino = next_t;
+	return TRUE;
+}
+
+// 指定行が0のみならTRUE
+BOOL isEmptyRow(Tetrimino *t, int n) {
+	int i;
+
+	if (n < 0 || TETRIMINO_HEIGHT <= n) {
+		return FALSE;
+	}
+	
+	for (i = 0; i < TETRIMINO_WIDTH; i++) {
+		if (t->tetrimino[n][i] != 0) {
+			return FALSE;
+		}
+	}
+	return TRUE;
+}
+
+// 指定行以降を詰める
+void compactionRowToUp(Tetrimino *t, int n) {
+	int i, k;
+
+	for (i = n; i < TETRIMINO_HEIGHT-1; i++) {
+		for (k = 0; k < TETRIMINO_WIDTH; k++) {
+			t->tetrimino[i][k] = t->tetrimino[i+1][k];
+			// 空いたところには0を埋める
+			t->tetrimino[i+1][k] = 0;
+		}
+	}
+}
+
+// 指定列が0のみならTRUE
+BOOL isEmptyColumn(Tetrimino *t, int n) {
+	int i;
+
+	if (n < 0 || TETRIMINO_WIDTH <= n) {
+		return FALSE;
+	}
+	
+	for (i = 0; i < TETRIMINO_HEIGHT; i++) {
+		if (t->tetrimino[i][n] != 0) {
+			return FALSE;
+		}
+	}
+	return TRUE;
+}
+
+// 指定列を詰める
+void compactionColumn(Tetrimino *t, int n) {
+	int i, k;
+
+	for (i = 0; i < TETRIMINO_HEIGHT; i++) {
+		for (k = n; k < TETRIMINO_WIDTH-1; k++) {
+			t->tetrimino[i][k] = t->tetrimino[i][k+1];
+			// 空いたところには0を埋める
+			t->tetrimino[i][k+1] = 0;
+		}
+	}
+}
+
+// テトリミノのバッファを左上に詰めるようにする
+void compactionTetriminoBuffer(Tetrimino *t) {
+	int i;
+	// 0しかない行を詰める
+	for (i = 0; i < TETRIMINO_HEIGHT; i++) {
+		if (isEmptyRow(t, 0) == TRUE) {
+			compactionRowToUp(t, 0);
+		}
+	}
+	// 0しかない列を詰める
+	for (i = 0; i < TETRIMINO_WIDTH; i++) {
+		if (isEmptyColumn(t, 0) == TRUE) {
+			compactionColumn(t, 0);
+		}
+	}
+}
+
+// テトリミノを回転する
+BOOL rotateTetrimino(Tetrimino t, RotateType type) {
+	int i, k;
+	Tetrimino next_t = t;
+	// 回転したテトリミノを用意
+	if (type == CLOCKWISE) {
+		for (i = 0; i < TETRIMINO_HEIGHT; i++) {
+			for (k = 0; k < TETRIMINO_WIDTH; k++) {
+				next_t.tetrimino[i][k] = t.tetrimino[TETRIMINO_HEIGHT-1-k][i];
+			}
+		}
+	} else {
+		for (i = 0; i < TETRIMINO_HEIGHT; i++) {
+			for (k = 0; k < TETRIMINO_WIDTH; k++) {
+				next_t.tetrimino[i][k] = t.tetrimino[k][TETRIMINO_WIDTH-1-i];
+			}
+		}
+	}
+	// 左上に詰める
+	compactionTetriminoBuffer(&next_t);
+	
 	// 一度取り除く
 	unsetTetrimino(t);
 	// おいてみる
@@ -276,10 +402,10 @@ void keyProc(WPARAM wp) {
 			moveTetrimino(currentTetrimino, MOVE_TO_DOWN_FAST);
 			break;
 		case VK_RETURN:
-			MessageBox(NULL, TEXT("ENTER"), TEXT("caption"), MB_OK);
+			rotateTetrimino(currentTetrimino, CLOCKWISE);
 			break;
 		case VK_SPACE:
-			MessageBox(NULL, TEXT("SPACE"), TEXT("caption"), MB_OK);
+			rotateTetrimino(currentTetrimino, COUNTER_CLOCKWISE);
 			break;
 	}
 }
@@ -287,7 +413,7 @@ void keyProc(WPARAM wp) {
 // アプリケーションとしての初期化処理
 void initializeApp() {
 	// 操作するテトリミノを用意して配置
-	createTetrimino(0, 0, 0);
+	createTetrimino(0, 0, 1);
 }
 
 // タイマーで呼び出されるメインループ
