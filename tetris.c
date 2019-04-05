@@ -1,4 +1,6 @@
 #include <windows.h>
+#include <stdlib.h>
+#include <time.h>
 
 #define WINDOW_PADDING_PIXEL	(10)
 #define BLOCK_PIXEL_SIZE		(15)
@@ -412,8 +414,10 @@ void keyProc(WPARAM wp) {
 
 // アプリケーションとしての初期化処理
 void initializeApp() {
+	// テトリミノ選択用につかう乱数の種
+	srand((unsigned)time(NULL));
 	// 操作するテトリミノを用意して配置
-	createTetrimino(0, 0, 1);
+	createTetrimino(0, 0, rand() % TETRIMINO_KINDS);
 }
 
 // タイマーで呼び出されるメインループ
@@ -423,7 +427,7 @@ void mainLoop(HWND hwnd) {
 	// 落ちなかったら固定して新しいテトリミノを用意
 	if (down_ret == FALSE) {
 		fixTetrimino(currentTetrimino);
-		createTetrimino(0, 0, 0);
+		createTetrimino(0, 0, rand() % TETRIMINO_KINDS);
 	}
 
 	// 再描画
