@@ -3,9 +3,9 @@
 #include <time.h>
 
 #define WINDOW_PADDING_PIXEL	(10)
-#define BLOCK_PIXEL_SIZE		(15)
-#define FIELD_HEIGHT_BLOCKS		(40)
-#define FIELD_WIDTH_BLOCKS		(20)
+#define BLOCK_PIXEL_SIZE		(30)
+#define FIELD_HEIGHT_BLOCKS		(20)
+#define FIELD_WIDTH_BLOCKS		(10)
 #define SCORE_FIELD_WIDTH_PIXEL	(200)
 #define TETRIMINO_KINDS			(7)
 #define TETRIMINO_HEIGHT		(4)
