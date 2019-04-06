@@ -1,5 +1,5 @@
 CC=gcc
-FLAGS=-lgdi32
+FLAGS=-lgdi32 -lwinmm
 
 tetris: tetris.c
 	$(CC) tetris.c $(FLAGS) -o tetris

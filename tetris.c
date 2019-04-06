@@ -21,6 +21,9 @@ enum blockType {
 	CONTROL_BLOCK
 };
 
+// ゲーム開始時刻
+DWORD play_start_time;
+
 // フィールド
 int playField[FIELD_HEIGHT_BLOCKS][FIELD_WIDTH_BLOCKS];
 
@@ -60,7 +63,7 @@ int tetriminos[TETRIMINO_KINDS][TETRIMINO_HEIGHT][TETRIMINO_WIDTH] = {
 		{1,1,0,0},
 		{1,0,0,0},
 		{1,0,0,0},
-		{1,0,0,0}
+		{0,0,0,0}
 	}
 };
 
@@ -425,6 +428,8 @@ void initializeApp() {
 	srand((unsigned)time(NULL));
 	// 操作するテトリミノを用意して配置
 	createTetrimino(0, 0, rand() % TETRIMINO_KINDS);
+	// ゲーム開始時刻を記録
+	play_start_time = timeGetTime();
 }
 
 // タイマーで呼び出されるメインループ
@@ -439,6 +444,19 @@ void mainLoop(HWND hwnd) {
 
 	// 再描画
 	InvalidateRect(hwnd, NULL, TRUE);
+}
+
+// ゲームのプレイ時間を表示
+void drawPlayTime(HDC hdc) {
+	DWORD now = timeGetTime();
+	static TCHAR buf[128];
+
+	DWORD during = (now - play_start_time) / 1000;
+	wsprintf(buf, "プレイ時間: %d", during);
+
+	SetTextColor(hdc , RGB(255 , 255, 255));
+	SetBkColor(hdc, RGB(0 , 0, 0));
+	TextOut(hdc , 350 , 10 , buf , lstrlen(buf));
 }
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
@@ -456,6 +474,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 			hdc = BeginPaint(hwnd, &ps);
 			drawFieldBoundary(hdc);
 			drawField(hdc);
+			drawPlayTime(hdc);
 			EndPaint(hwnd, &ps);
 			return 0;
 		case WM_TIMER:
