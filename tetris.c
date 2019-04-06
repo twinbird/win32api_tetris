@@ -11,6 +11,13 @@
 #define TETRIMINO_HEIGHT		(4)
 #define TETRIMINO_WIDTH			(4)
 
+// ゲームの状態
+enum gameStatus {
+	PLAYING,
+	PAUSE,
+	GAME_OVER
+};
+
 // ブロックの種類
 enum blockType {
 	// ブロックがない
@@ -22,7 +29,8 @@ enum blockType {
 };
 
 // ゲーム開始時刻
-DWORD play_start_time;
+DWORD playStartTime;
+enum gameStatus currentGameStatus;
 
 // ゲームのスコア
 int playing_score;
@@ -184,7 +192,7 @@ void unsetTetrimino(Tetrimino t) {
 }
 
 // 新しいテトリミノを作成して操作中に設定
-void createTetrimino(int x, int y, int type) {
+BOOL createTetrimino(int x, int y, int type) {
 	int i, k;
 	Tetrimino t;
 
@@ -198,9 +206,14 @@ void createTetrimino(int x, int y, int type) {
 		}
 	}
 	currentTetrimino = t;
+	
+	if (collisionTetrimino(t, x, y) == FALSE) {
+		return FALSE;
+	}
 
 	// 配置
 	setTetrimino(currentTetrimino);
+	return TRUE;
 }
 
 // テトリミノを移動する
@@ -280,7 +293,9 @@ BOOL downTetrimino() {
 	if (moveTetrimino(currentTetrimino, MOVE_TO_DOWN) == FALSE) {
 		fixTetrimino(currentTetrimino);
 		playing_score += eraseLines();
-		createTetrimino(0, 0, rand() % TETRIMINO_KINDS);
+		if (createTetrimino(0, 0, rand() % TETRIMINO_KINDS) == FALSE) {
+			currentGameStatus = GAME_OVER;
+		}
 		return FALSE;
 	}
 	return TRUE;
@@ -451,7 +466,11 @@ BOOL setClientSize(HWND hwnd, int width, int height) {
 }
 
 // キー操作処理
-void keyProc(WPARAM wp) {
+BOOL keyProc(WPARAM wp) {
+	if (currentGameStatus == GAME_OVER) {
+		return FALSE;
+	}
+
 	switch (wp) {
 		case VK_RIGHT:
 			moveTetrimino(currentTetrimino, MOVE_TO_RIGHT);
@@ -473,10 +492,13 @@ void keyProc(WPARAM wp) {
 			rotateTetrimino(currentTetrimino, COUNTER_CLOCKWISE);
 			break;
 	}
+	return TRUE;
 }
 
 // アプリケーションとしての初期化処理
 void initializeApp() {
+	// ゲームの状態を設定
+	currentGameStatus = PLAYING;
 	// スコアをリセット
 	playing_score = 0;
 	// テトリミノ選択用につかう乱数の種
@@ -484,13 +506,22 @@ void initializeApp() {
 	// 操作するテトリミノを用意して配置
 	createTetrimino(0, 0, rand() % TETRIMINO_KINDS);
 	// ゲーム開始時刻を記録
-	play_start_time = timeGetTime();
+	playStartTime = timeGetTime();
 }
 
 // タイマーで呼び出されるメインループ
 void mainLoop(HWND hwnd) {
-	// テトリミノを落とす
-	downTetrimino();
+	switch (currentGameStatus) {
+		case PLAYING:
+			// テトリミノを落とす
+			downTetrimino();
+			break;
+		case PAUSE:
+			break;
+		case GAME_OVER:
+			KillTimer(hwnd, 1);
+			break;
+	}
 
 	// 再描画
 	InvalidateRect(hwnd, NULL, TRUE);
@@ -499,29 +530,35 @@ void mainLoop(HWND hwnd) {
 // ゲームのスコアフィールド欄を表示
 void drawScoreField(HDC hdc) {
 	DWORD now = timeGetTime();
-	static TCHAR play_time_buf[128];
-	static TCHAR current_tetrimino_buf[128];
-	static TCHAR score_buf[128];
+	static TCHAR buf[128];
 
 	// プレイ時間
-	DWORD during = (now - play_start_time) / 1000;
-	wsprintf(play_time_buf, "プレイ時間: %d", during);
+	DWORD during = (now - playStartTime) / 1000;
+	wsprintf(buf, "プレイ時間: %d", during);
 
 	SetTextColor(hdc , RGB(255 , 255, 255));
 	SetBkColor(hdc, RGB(0 , 0, 0));
-	TextOut(hdc , 350 , 10 , play_time_buf , lstrlen(play_time_buf));
+	TextOut(hdc , 350 , 10 , buf , lstrlen(buf));
 
 	// 現在のテトリミノ情報
-	wsprintf(current_tetrimino_buf, "type: %d, x: %d, y: %d", currentTetrimino.type, currentTetrimino.x, currentTetrimino.y);
+	wsprintf(buf, "type: %d, x: %d, y: %d", currentTetrimino.type, currentTetrimino.x, currentTetrimino.y);
 	SetTextColor(hdc , RGB(255 , 255, 255));
 	SetBkColor(hdc, RGB(0 , 0, 0));
-	TextOut(hdc , 350 , 30 , current_tetrimino_buf , lstrlen(current_tetrimino_buf));
+	TextOut(hdc , 350 , 30 , buf , lstrlen(buf));
 	
 	// 現在のスコア
-	wsprintf(score_buf, "Score: %d", playing_score * 10);
+	wsprintf(buf, "Score: %d", playing_score * 10);
 	SetTextColor(hdc , RGB(255 , 255, 255));
 	SetBkColor(hdc, RGB(0 , 0, 0));
-	TextOut(hdc , 350 , 60 , score_buf , lstrlen(score_buf));
+	TextOut(hdc , 350 , 60 , buf , lstrlen(buf));
+
+	// ゲームオーバーならゲームオーバーって表示
+	if (currentGameStatus == GAME_OVER) {
+		wsprintf(buf, "GAME OVER");
+		SetTextColor(hdc , RGB(255 , 0, 0));
+		SetBkColor(hdc, RGB(0 , 0, 0));
+		TextOut(hdc , 120 , 60 , buf , lstrlen(buf));
+	}
 }
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
@@ -546,8 +583,9 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 			mainLoop(hwnd);
 			return 0;
 		case WM_KEYDOWN:
-			keyProc(wp);
-			InvalidateRect(hwnd, NULL, TRUE);
+			if (keyProc(wp) == TRUE) {
+				InvalidateRect(hwnd, NULL, TRUE);
+			}
 			return 0;
 	}
 	return DefWindowProc(hwnd, msg, wp, lp);
