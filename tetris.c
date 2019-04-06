@@ -64,6 +64,12 @@ int tetriminos[TETRIMINO_KINDS][TETRIMINO_HEIGHT][TETRIMINO_WIDTH] = {
 		{1,0,0,0},
 		{1,0,0,0},
 		{0,0,0,0}
+	},
+	{
+		{1,1,0,0},
+		{0,1,0,0},
+		{0,1,0,0},
+		{0,0,0,0}
 	}
 };
 
@@ -446,17 +452,25 @@ void mainLoop(HWND hwnd) {
 	InvalidateRect(hwnd, NULL, TRUE);
 }
 
-// ゲームのプレイ時間を表示
-void drawPlayTime(HDC hdc) {
+// ゲームのスコアフィールド欄を表示
+void drawScoreField(HDC hdc) {
 	DWORD now = timeGetTime();
-	static TCHAR buf[128];
+	static TCHAR play_time_buf[128];
+	static TCHAR current_tetrimino_buf[128];
 
+	// プレイ時間
 	DWORD during = (now - play_start_time) / 1000;
-	wsprintf(buf, "プレイ時間: %d", during);
+	wsprintf(play_time_buf, "プレイ時間: %d", during);
 
 	SetTextColor(hdc , RGB(255 , 255, 255));
 	SetBkColor(hdc, RGB(0 , 0, 0));
-	TextOut(hdc , 350 , 10 , buf , lstrlen(buf));
+	TextOut(hdc , 350 , 10 , play_time_buf , lstrlen(play_time_buf));
+
+	// 現在のテトリミノ情報
+	wsprintf(current_tetrimino_buf, "type: %d, x: %d, y: %d", currentTetrimino.type, currentTetrimino.x, currentTetrimino.y);
+	SetTextColor(hdc , RGB(255 , 255, 255));
+	SetBkColor(hdc, RGB(0 , 0, 0));
+	TextOut(hdc , 350 , 30 , current_tetrimino_buf , lstrlen(current_tetrimino_buf));
 }
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
@@ -474,7 +488,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 			hdc = BeginPaint(hwnd, &ps);
 			drawFieldBoundary(hdc);
 			drawField(hdc);
-			drawPlayTime(hdc);
+			drawScoreField(hdc);
 			EndPaint(hwnd, &ps);
 			return 0;
 		case WM_TIMER:
