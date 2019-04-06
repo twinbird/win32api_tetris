@@ -24,6 +24,9 @@ enum blockType {
 // ゲーム開始時刻
 DWORD play_start_time;
 
+// ゲームのスコア
+int playing_score;
+
 // フィールド
 int playField[FIELD_HEIGHT_BLOCKS][FIELD_WIDTH_BLOCKS];
 
@@ -229,10 +232,54 @@ BOOL moveTetrimino(Tetrimino t, MoveType type) {
 	return TRUE;
 }
 
+// フィールドのn行目以前を以降に1行分詰める
+void compactionLines(int n) {
+	int i, k;
+
+	for (i = n; 0 <= i; i--) {
+		for (k = 0; k < FIELD_WIDTH_BLOCKS; k++) {
+			playField[i][k] = playField[i-1][k];
+		}
+	}
+	// 一番上の行は0埋めしておく
+	for (k = 0; k < FIELD_WIDTH_BLOCKS; k++) {
+		playField[0][k] = 0;
+	}
+}
+
+// n行目がそろっていればTRUE
+BOOL isCompleteLine(int n) {
+	int i;
+
+	for (i = 0; i < FIELD_WIDTH_BLOCKS; i++) {
+		if (playField[n][i] == FREE_BLOCK) {
+			return FALSE;
+		}
+	}
+	return TRUE;
+}
+
+// フィールドを調べて消せるラインがあれば消す
+// 消した行数を返す
+int eraseLines() {
+	int ret = 0;
+	int i;
+
+	for (i = FIELD_HEIGHT_BLOCKS-1; 0 <= i; i--) {
+		// そろっていれば1行詰める
+		if (isCompleteLine(i) == TRUE) {
+			compactionLines(i);
+			ret++;
+		}
+	}
+	return ret;
+}
+
 // テトリミノを1つ落とす
 BOOL downTetrimino() {
 	if (moveTetrimino(currentTetrimino, MOVE_TO_DOWN) == FALSE) {
 		fixTetrimino(currentTetrimino);
+		playing_score += eraseLines();
 		createTetrimino(0, 0, rand() % TETRIMINO_KINDS);
 		return FALSE;
 	}
@@ -430,6 +477,8 @@ void keyProc(WPARAM wp) {
 
 // アプリケーションとしての初期化処理
 void initializeApp() {
+	// スコアをリセット
+	playing_score = 0;
 	// テトリミノ選択用につかう乱数の種
 	srand((unsigned)time(NULL));
 	// 操作するテトリミノを用意して配置
@@ -440,13 +489,8 @@ void initializeApp() {
 
 // タイマーで呼び出されるメインループ
 void mainLoop(HWND hwnd) {
-	// 1コマ落とす
-	BOOL down_ret = moveTetrimino(currentTetrimino, MOVE_TO_DOWN);
-	// 落ちなかったら固定して新しいテトリミノを用意
-	if (down_ret == FALSE) {
-		fixTetrimino(currentTetrimino);
-		createTetrimino(0, 0, rand() % TETRIMINO_KINDS);
-	}
+	// テトリミノを落とす
+	downTetrimino();
 
 	// 再描画
 	InvalidateRect(hwnd, NULL, TRUE);
@@ -457,6 +501,7 @@ void drawScoreField(HDC hdc) {
 	DWORD now = timeGetTime();
 	static TCHAR play_time_buf[128];
 	static TCHAR current_tetrimino_buf[128];
+	static TCHAR score_buf[128];
 
 	// プレイ時間
 	DWORD during = (now - play_start_time) / 1000;
@@ -471,6 +516,12 @@ void drawScoreField(HDC hdc) {
 	SetTextColor(hdc , RGB(255 , 255, 255));
 	SetBkColor(hdc, RGB(0 , 0, 0));
 	TextOut(hdc , 350 , 30 , current_tetrimino_buf , lstrlen(current_tetrimino_buf));
+	
+	// 現在のスコア
+	wsprintf(score_buf, "Score: %d", playing_score * 10);
+	SetTextColor(hdc , RGB(255 , 255, 255));
+	SetBkColor(hdc, RGB(0 , 0, 0));
+	TextOut(hdc , 350 , 60 , score_buf , lstrlen(score_buf));
 }
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
